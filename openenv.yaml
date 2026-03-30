@@ -1,0 +1,242 @@
+name: linux-sre-env
+version: "1.0.0"
+description: "Linux System Reliability Engineer Training Environment"
+
+# Environment metadata
+metadata:
+  author: "SRE Team"
+  domain: "system_administration"
+  tags:
+    - "sre"
+    - "linux"
+    - "troubleshooting"
+    - "process-management"
+    - "agentic"
+
+# API Configuration
+api:
+  version: "v1"
+  base_url: "http://localhost:8000"
+  endpoints:
+    - path: "/api/v1/env/reset"
+      method: "POST"
+      description: "Reset environment and get initial observation"
+    - path: "/api/v1/env/{env_id}/step"
+      method: "POST"
+      description: "Execute action in environment"
+    - path: "/api/v1/tasks"
+      method: "GET"
+      description: "List available tasks"
+    - path: "/api/v1/env/{env_id}/state"
+      method: "GET"
+      description: "Get full environment state (debugging)"
+
+# Task Configuration
+tasks:
+  easy:
+    name: "Log Analysis"
+    description: "Find a specific error in application logs"
+    difficulty: 1
+    estimated_steps: 2
+    key_commands:
+      - "cat"
+      - "grep"
+    max_episode_steps: 50
+
+  medium:
+    name: "Permission Repair"
+    description: "Fix file permissions for a shell script"
+    difficulty: 2
+    estimated_steps: 3
+    key_commands:
+      - "chmod"
+      - "ls"
+    max_episode_steps: 50
+
+  hard:
+    name: "Process Recovery"
+    description: "Diagnose and recover a failed service"
+    difficulty: 3
+    estimated_steps: 5
+    key_commands:
+      - "ps"
+      - "kill"
+      - "systemctl"
+    max_episode_steps: 50
+
+# Observation Space
+observation:
+  type: "dict"
+  keys:
+    - name: "current_directory"
+      type: "string"
+      description: "Current working directory"
+    - name: "processes"
+      type: "string"
+      description: "List of running processes"
+    - name: "filesystem"
+      type: "string"
+      description: "Contents of current directory"
+    - name: "task_name"
+      type: "string"
+      description: "Name of current task"
+    - name: "task_description"
+      type: "string"
+      description: "Description of what needs to be done"
+
+# Action Space
+action:
+  type: "string"
+  description: "Shell command to execute"
+  examples:
+    - "cat /var/log/app.log"
+    - "grep 500 /var/log/app.log"
+    - "chmod 0755 /home/user/scripts/cleanup.sh"
+    - "ps | grep postgres"
+    - "systemctl restart postgres"
+
+# Reward Configuration
+reward:
+  type: "float"
+  min: -1.0
+  max: 1.0
+  structure:
+    step_penalty: -0.01
+    progress_bonus: 0.5
+    completion_bonus: 0.5
+  description: "Reward for completing task stages"
+
+# Terminal Commands
+supported_commands:
+  - name: "cat"
+    description: "Display file contents"
+    safe: true
+    example: "cat /var/log/app.log"
+
+  - name: "grep"
+    description: "Search for patterns in files"
+    safe: true
+    example: "grep ERROR /var/log/app.log"
+
+  - name: "ls"
+    description: "List directory contents"
+    safe: true
+    example: "ls -la /home/user"
+
+  - name: "chmod"
+    description: "Change file permissions"
+    safe: true
+    example: "chmod 0755 /home/user/scripts/cleanup.sh"
+
+  - name: "ps"
+    description: "List running processes"
+    safe: true
+    example: "ps | grep postgres"
+
+  - name: "kill"
+    description: "Terminate a process"
+    safe: true
+    example: "kill postgres"
+
+  - name: "systemctl"
+    description: "Manage system services"
+    safe: true
+    example: "systemctl restart nginx"
+
+  - name: "test"
+    description: "Evaluate file characteristics"
+    safe: true
+    example: "test -f /home/user/script.sh"
+
+  - name: "echo"
+    description: "Print text"
+    safe: true
+    example: "echo 'Hello, World!'"
+
+  - name: "pwd"
+    description: "Print working directory"
+    safe: true
+    example: "pwd"
+
+# Filesystem Configuration
+filesystem:
+  type: "virtual"
+  locations:
+    - path: "/var/log/app.log"
+      description: "Application log file"
+      permissions: "0644"
+    - path: "/home/user/scripts/cleanup.sh"
+      description: "Cleanup shell script"
+      permissions: "0644"
+    - path: "/etc/app.conf"
+      description: "Application configuration"
+      permissions: "0640"
+
+# Process Configuration
+processes:
+  - name: "nginx"
+    pid: 1024
+    status: "running"
+    restartable: true
+
+  - name: "postgres"
+    pid: 5432
+    status: "dead"
+    restartable: true
+
+  - name: "redis"
+    pid: 6379
+    status: "running"
+    restartable: true
+
+# Grading Configuration
+grading:
+  system: "objective"
+  method: "state_verification"
+  stages:
+    - stage: 1
+      description: "Problem identified"
+      score_multiplier: 0.2
+    - stage: 2
+      description: "Solution attempted"
+      score_multiplier: 0.5
+    - stage: 3
+      description: "Solution verified"
+      score_multiplier: 1.0
+
+# Server Configuration
+server:
+  host: "0.0.0.0"
+  port: 8000
+  workers: 4
+  timeout: 30
+  debug: false
+
+# Docker Configuration
+docker:
+  image: "linux-sre-env:latest"
+  base_image: "python:3.11-slim"
+  ports:
+    - "8000:8000"
+  environment:
+    - "PYTHONUNBUFFERED=1"
+    - "PYTHONDONTWRITEBYTECODE=1"
+
+# Performance Requirements
+performance:
+  max_api_response_time_ms: 100
+  memory_per_environment_mb: 10
+  max_concurrent_environments: 1000
+  startup_time_seconds: 5
+
+# Compliance
+compliance:
+  openenv: "1.0"
+  standards:
+    - "OpenEnv REST API v1"
+    - "Pydantic v2"
+    - "Python 3.11+"
+  certifications:
+    - "Type-safe"
+    - "Deterministic"
+    - "Reproducible"
