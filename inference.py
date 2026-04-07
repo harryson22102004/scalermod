@@ -1,8 +1,7 @@
 import argparse
 import asyncio
-import json
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from openai import OpenAI
 
@@ -10,132 +9,206 @@ from src.agent import LLMAgent, SystemPrompts
 from src.environment import TrainingEnv
 
 
-API_BASE_URL = os.environ.get("API_BASE_URL", "").strip()
-MODEL_NAME = os.environ.get("MODEL_NAME", "").strip()
-API_KEY = os.environ.get("HF_TOKEN", "").strip()
+API_BASE_URL = os.getenv("API_BASE_URL", "https://api.openai.com/v1").strip()
+MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4.1-mini").strip()
+HF_TOKEN = os.getenv("HF_TOKEN", "").strip()
+BENCHMARK = os.getenv("BENCHMARK_NAME", "linux-sre-env").strip()
 
-SUCCESS_SCORE_THRESHOLD = 0.8
-MAX_TOTAL_REWARD = 1.0
+
+def _safe_int(raw: str, default: int) -> int:
+    try:
+        return int(raw)
+    except Exception:
+        return default
+
+
+def _safe_float(raw: str, default: float) -> float:
+    try:
+        return float(raw)
+    except Exception:
+        return default
+
+
+MAX_STEPS_OVERRIDE = _safe_int(os.getenv("MAX_STEPS", "0"), 0)
+TEMPERATURE = _safe_float(os.getenv("INFER_TEMPERATURE", "0.2"), 0.2)
+MAX_TOKENS = _safe_int(os.getenv("INFER_MAX_TOKENS", "320"), 320)
+SUCCESS_SCORE_THRESHOLD = _safe_float(os.getenv("SUCCESS_SCORE_THRESHOLD", "0.8"), 0.8)
+
+
+def validate_required_env() -> None:
+    missing: List[str] = []
+    if not API_BASE_URL:
+        missing.append("API_BASE_URL")
+    if not MODEL_NAME:
+        missing.append("MODEL_NAME")
+    if not HF_TOKEN:
+        missing.append("HF_TOKEN")
+    if missing:
+        raise RuntimeError("Missing required environment variables: " + ", ".join(missing))
+
+
+def _bool_text(value: bool) -> str:
+    return "true" if value else "false"
+
+
+def _one_line(value: str) -> str:
+    return str(value).replace("\r", " ").replace("\n", " ").strip()
 
 
 def log_start(task: str, env: str, model: str) -> None:
     print(f"[START] task={task} env={env} model={model}", flush=True)
 
 
-def log_step(step: int, action: str, reward: float, done: bool, error: Optional[str] = None) -> None:
-    payload: Dict[str, Any] = {
-        "step": step,
-        "action": action,
-        "reward": round(reward, 3),
-        "done": done,
-        "error": error,
-    }
-    print(f"[STEP] {json.dumps(payload, ensure_ascii=True)}", flush=True)
+def log_step(step: int, action: str, reward: float, done: bool, error: Optional[str]) -> None:
+    error_value = _one_line(error) if error else "null"
+    print(
+        f"[STEP] step={step} action={_one_line(action)} reward={reward:.2f} done={_bool_text(done)} error={error_value}",
+        flush=True,
+    )
 
 
 def log_end(success: bool, steps: int, score: float, rewards: List[float]) -> None:
-    payload: Dict[str, Any] = {
-        "success": success,
-        "steps": steps,
-        "score": round(score, 3),
-        "rewards": [round(value, 3) for value in rewards],
-    }
-    print(f"[END] {json.dumps(payload, ensure_ascii=True)}", flush=True)
-
-
-def validate_env_config() -> None:
-    missing: List[str] = []
-    if not API_BASE_URL:
-        missing.append("API_BASE_URL")
-    if not MODEL_NAME:
-        missing.append("MODEL_NAME")
-    if not API_KEY:
-        missing.append("HF_TOKEN")
-    if missing:
-        raise RuntimeError(
-            "Missing required environment variables for inference.py: "
-            + ", ".join(missing)
-        )
+    rewards_text = ",".join(f"{r:.2f}" for r in rewards)
+    print(
+        f"[END] success={_bool_text(success)} steps={steps} score={score:.3f} rewards={rewards_text}",
+        flush=True,
+    )
 
 
 def build_client() -> OpenAI:
-    validate_env_config()
-    return OpenAI(api_key=API_KEY, base_url=API_BASE_URL)
+    validate_required_env()
+    return OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN)
 
 
-def make_messages(initial: Dict[str, Any], history: List[str], last_reward: float) -> List[Any]:
-    system_prompt = SystemPrompts.get_sys(str(initial["task_name"]))
-    user_prompt = SystemPrompts.format_observation(initial)
-    if history:
-        user_prompt += "\n\nRECENT HISTORY:\n" + "\n".join(history)
-    user_prompt += f"\n\nLast reward: {last_reward:+.2f}"
+def build_messages(initial: Dict[str, Any], history: List[str], step: int, last_reward: float) -> List[Any]:
+    system_prompt = (
+        SystemPrompts.get_sys(str(initial.get("task_name", "linux-sre")))
+        + "\n\nReturn exactly one shell command for the next best move."
+    )
+
+    observation = SystemPrompts.format_observation(initial)
+    recent = "\n".join(history[-4:]) if history else "None"
+    user_prompt = (
+        f"{observation}\n\n"
+        f"Step: {step}\n"
+        f"Last reward: {last_reward:.2f}\n"
+        f"Recent attempts:\n{recent}\n\n"
+        "Now provide the next command."
+    )
 
     return [
-        {"role": "system", "content": system_prompt + "\n\nReturn exactly one shell command in a fenced bash block."},
+        {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_prompt},
     ]
 
 
+def decide_action(
+    client: OpenAI,
+    initial: Dict[str, Any],
+    history: List[str],
+    step: int,
+    last_reward: float,
+) -> Tuple[str, Optional[str]]:
+    try:
+        messages: List[Any] = build_messages(initial, history, step, last_reward)
+        response: Any = client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=messages,
+            temperature=TEMPERATURE,
+            max_tokens=MAX_TOKENS,
+            stream=False,
+        )
+        raw_text = str(response.choices[0].message.content or "").strip()
+        command = LLMAgent.extract_command(raw_text) or raw_text
+        command = _one_line(command)
+        if not command:
+            return "echo noop", "empty_model_output"
+        return command, None
+    except Exception as exc:
+        return "echo fallback", _one_line(str(exc))
+
+
 async def run_task(task_key: str) -> None:
     env = TrainingEnv(scenario=task_key)
-    initial = env.reset()
+    reset_out = env.reset()
+    prompt_state: Dict[str, Any] = {
+        "task_name": reset_out["info"]["task_name"],
+        "task_instructions": reset_out["info"]["instructions"],
+        "observation": reset_out["observation"],
+        "max_steps": reset_out["info"]["max_steps"],
+    }
     client = build_client()
 
-    history: List[str] = []
     rewards: List[float] = []
+    history: List[str] = []
     steps_taken = 0
     score = 0.0
     success = False
     last_reward = 0.0
 
-    log_start(task=initial["info"]["task_name"], env=task_key, model=MODEL_NAME)
+    max_steps = MAX_STEPS_OVERRIDE if MAX_STEPS_OVERRIDE > 0 else int(reset_out["info"]["max_steps"])
+
+    log_start(task=task_key, env=BENCHMARK, model=MODEL_NAME)
 
     try:
-        for step in range(1, initial["info"]["max_steps"] + 1):
+        for step in range(1, max_steps + 1):
             if env.finished:
                 break
 
-            messages = make_messages(initial, history, last_reward)
-            response = client.chat.completions.create(
-                model=MODEL_NAME,
-                messages=messages,
-                temperature=0.2,
-                max_tokens=384,
-            )
-            message = str(response.choices[0].message.content or "").strip()
-            command = LLMAgent.extract_command(message) or message
-
+            command, model_error = decide_action(client, prompt_state, history, step, last_reward)
             result = env.step(command)
-            reward = result["reward"] or 0.0
-            done = result["done"]
-            error = None
+
+            reward = float(result.get("reward") or 0.0)
+            done = bool(result.get("done"))
+            info = result.get("info", {})
+            score = float(info.get("task_score", score))
+            if "observation" in result:
+                prompt_state["observation"] = result["observation"]
+
+            step_error = model_error
+            if not step_error:
+                raw_error = info.get("last_action_error") or info.get("error")
+                if raw_error:
+                    step_error = _one_line(str(raw_error))
 
             rewards.append(reward)
             steps_taken = step
             last_reward = reward
 
-            log_step(step=step, action=command, reward=reward, done=done, error=error)
-            history.append(f"Step {step}: {command!r} -> reward {reward:+.2f}")
+            log_step(step=step, action=command, reward=reward, done=done, error=step_error)
+            history.append(f"step={step} action={command} reward={reward:.2f}")
 
             if done:
                 break
 
-        score = sum(rewards) / MAX_TOTAL_REWARD if MAX_TOTAL_REWARD > 0 else 0.0
         score = min(max(score, 0.0), 1.0)
         success = score >= SUCCESS_SCORE_THRESHOLD
+
+    except Exception as exc:
+        steps_taken += 1
+        log_step(
+            step=steps_taken,
+            action="internal_error",
+            reward=0.0,
+            done=True,
+            error=_one_line(str(exc)),
+        )
+
     finally:
         log_end(success=success, steps=steps_taken, score=score, rewards=rewards)
 
 
 async def main() -> None:
-    parser = argparse.ArgumentParser(description="Run the OpenEnv LLM baseline.")
+    parser = argparse.ArgumentParser(description="Custom OpenEnv inference runner.")
     parser.add_argument("--task", default="log_analysis", help="Scenario key to run")
-    parser.add_argument("--all", action="store_true", help="Run all available tasks")
+    parser.add_argument("--all", action="store_true", help="Run every available task")
     args = parser.parse_args()
 
+    validate_required_env()
+
     task_keys = TrainingEnv.avail_tasks() if args.all else [args.task]
-    for task_key in task_keys:
-        await run_task(task_key)
+    for key in task_keys:
+        await run_task(key)
 
 
 if __name__ == "__main__":
