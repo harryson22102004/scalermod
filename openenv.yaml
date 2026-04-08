@@ -16,7 +16,7 @@ metadata:
 # API Configuration
 api:
   version: "v1"
-  base_url: "http://localhost:8000"
+  base_url: "http://0.0.0.0:7860"
   endpoints:
     - path: "/api/v1/env/reset"
       method: "POST"
