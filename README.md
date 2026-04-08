@@ -3,7 +3,8 @@ title: ChaosLab
 emoji: 🔧
 colorFrom: red
 colorTo: yellow
-sdk: static
+sdk: docker
+app_file: app.py
 pinned: false
 ---
 
@@ -34,7 +35,7 @@ It combines a virtual Linux system, objective scoring, RL agents, and optional O
 
 - Backend: src/server.py, src/environment.py, src/scenarios.py, src/terminal_emulator.py
 - Agents: src/agent.py, src/train_ai.py, model registry under models/
-- Frontend: frontend/src/app/*
+- Frontend: frontend/src/app/\*
 - Inference entrypoint: inference.py
 
 ## Quick start
