@@ -1,6 +1,16 @@
 "use client";
 
-import { Activity, Skull, HardDrive, Globe, Cpu, Server, SlidersHorizontal, Settings, Search, X, ChevronDown } from "lucide-react";
+import Activity from "lucide-react/dist/esm/icons/activity";
+import Skull from "lucide-react/dist/esm/icons/skull";
+import HardDrive from "lucide-react/dist/esm/icons/hard-drive";
+import Globe from "lucide-react/dist/esm/icons/globe";
+import Cpu from "lucide-react/dist/esm/icons/cpu";
+import Server from "lucide-react/dist/esm/icons/server";
+import SlidersHorizontal from "lucide-react/dist/esm/icons/sliders-horizontal";
+import Settings from "lucide-react/dist/esm/icons/settings";
+import Search from "lucide-react/dist/esm/icons/search";
+import X from "lucide-react/dist/esm/icons/x";
+import ChevronDown from "lucide-react/dist/esm/icons/chevron-down";
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";

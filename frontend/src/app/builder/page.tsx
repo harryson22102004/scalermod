@@ -1,10 +1,22 @@
 "use client";
 
-import {
-  Cpu, Globe, Server, Activity, Zap, Play, Download,
-  Network, Database, CheckCircle2, Shield, HardDrive,
-  ChevronDown, AlertTriangle, Target, Eye, Brain
-} from "lucide-react";
+import Cpu from "lucide-react/dist/esm/icons/cpu";
+import Globe from "lucide-react/dist/esm/icons/globe";
+import Server from "lucide-react/dist/esm/icons/server";
+import Activity from "lucide-react/dist/esm/icons/activity";
+import Zap from "lucide-react/dist/esm/icons/zap";
+import Play from "lucide-react/dist/esm/icons/play";
+import Download from "lucide-react/dist/esm/icons/download";
+import Network from "lucide-react/dist/esm/icons/network";
+import Database from "lucide-react/dist/esm/icons/database";
+import CheckCircle2 from "lucide-react/dist/esm/icons/circle-check-big";
+import Shield from "lucide-react/dist/esm/icons/shield";
+import HardDrive from "lucide-react/dist/esm/icons/hard-drive";
+import ChevronDown from "lucide-react/dist/esm/icons/chevron-down";
+import AlertTriangle from "lucide-react/dist/esm/icons/triangle-alert";
+import Target from "lucide-react/dist/esm/icons/target";
+import Eye from "lucide-react/dist/esm/icons/eye";
+import Brain from "lucide-react/dist/esm/icons/brain";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 

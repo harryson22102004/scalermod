@@ -1,6 +1,16 @@
 "use client";
 
-import { Activity, CircleCheck, Circle, Search, History, CheckCircle2, Brain, ChevronDown, Send, Lightbulb, Zap } from "lucide-react";
+import Activity from "lucide-react/dist/esm/icons/activity";
+import CircleCheck from "lucide-react/dist/esm/icons/circle-check";
+import Circle from "lucide-react/dist/esm/icons/circle";
+import Search from "lucide-react/dist/esm/icons/search";
+import History from "lucide-react/dist/esm/icons/history";
+import CheckCircle2 from "lucide-react/dist/esm/icons/circle-check-big";
+import Brain from "lucide-react/dist/esm/icons/brain";
+import ChevronDown from "lucide-react/dist/esm/icons/chevron-down";
+import Send from "lucide-react/dist/esm/icons/send";
+import Lightbulb from "lucide-react/dist/esm/icons/lightbulb";
+import Zap from "lucide-react/dist/esm/icons/zap";
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 

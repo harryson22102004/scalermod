@@ -1,6 +1,12 @@
 "use client";
 
-import { Zap, Server, ChevronDown, CheckCircle2, ShieldAlert, Cpu, Brain } from "lucide-react";
+import Zap from "lucide-react/dist/esm/icons/zap";
+import Server from "lucide-react/dist/esm/icons/server";
+import ChevronDown from "lucide-react/dist/esm/icons/chevron-down";
+import CheckCircle2 from "lucide-react/dist/esm/icons/circle-check-big";
+import ShieldAlert from "lucide-react/dist/esm/icons/shield-alert";
+import Cpu from "lucide-react/dist/esm/icons/cpu";
+import Brain from "lucide-react/dist/esm/icons/brain";
 import { useState, useEffect } from "react";
 
 export default function ArenaPage() {
