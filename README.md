@@ -1,3 +1,12 @@
+---
+title: ChaosLab
+emoji: 🔧
+colorFrom: red
+colorTo: yellow
+sdk: static
+pinned: false
+---
+
 # ChaosLab: AI SRE Training Environment
 
 ChaosLab is a production-style training environment for AI agents to practice Linux/SRE incident response.
