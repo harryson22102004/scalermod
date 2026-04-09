@@ -1,3 +1,12 @@
+---
+title: ChaosLab
+emoji: 🔧
+colorFrom: red
+colorTo: gray
+sdk: docker
+app_port: 7860
+---
+
 # ChaosLab — AI SRE Training Environment
 
 ## What Is This?
