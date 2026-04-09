@@ -9,10 +9,16 @@ from openai import OpenAI
 from src.agent import LLMAgent, SystemPrompts
 from src.environment import TrainingEnv
 
-
 API_BASE_URL = os.getenv("API_BASE_URL", "https://api.openai.com/v1").strip()
-MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4.1-mini").strip()
+MODEL_NAME = os.getenv("MODEL_NAME", "").strip()
 HF_TOKEN = os.getenv("HF_TOKEN", "").strip()
+
+# Validate
+if not MODEL_NAME:
+    raise ValueError("MODEL_NAME is not set in environment variables")
+
+if not HF_TOKEN:
+    raise ValueError("HF_TOKEN (API key) is not set in environment variables")
 BENCHMARK = os.getenv("BENCHMARK_NAME", "linux-sre-env").strip()
 
 

@@ -70,7 +70,53 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    return {"status": "ok", "service": "linux-sre-env", "version": "2.0.0"}
+    return {"status": "healthy", "service": "linux-sre-env", "version": "2.0.0"}
+
+
+@app.get("/metadata")
+async def metadata():
+    return {
+        "name": "linux-sre-env",
+        "description": (
+            "Linux System Reliability Engineer Training Environment. "
+            "A simulated Linux server where AI agents practice diagnosing and fixing "
+            "real infrastructure problems via shell commands."
+        ),
+        "version": "2.0.0",
+        "author": "SRE Team",
+        "domain": "system_administration",
+        "tags": ["sre", "linux", "troubleshooting", "agentic"],
+    }
+
+
+@app.get("/schema")
+async def schema():
+    return {
+        "action": {
+            "type": "string",
+            "description": "Shell command to execute in the virtual environment",
+        },
+        "observation": {
+            "type": "object",
+            "properties": {
+                "current_directory": {"type": "string"},
+                "processes": {"type": "string"},
+                "filesystem": {"type": "string"},
+                "task_name": {"type": "string"},
+                "task_description": {"type": "string"},
+            },
+        },
+        "state": {
+            "type": "object",
+            "properties": {
+                "episode_step": {"type": "integer"},
+                "max_steps": {"type": "integer"},
+                "task_score": {"type": "number"},
+                "task_difficulty": {"type": "string"},
+                "scenario_key": {"type": "string"},
+            },
+        },
+    }
 
 
 @app.get("/api/v1/tasks")
@@ -171,13 +217,33 @@ async def reset_alias(req: ResetPayload):
     return await reset(req)
 
 
-@app.post("/step/{env_id}")
-async def step_alias(env_id: str, req: StepPayload):
+@app.post("/step")
+async def step_alias(req: StepPayload, env_id: Optional[str] = None):
+    """Top-level /step — uses the most recently created env if env_id is omitted."""
+    if env_id is None and backends:
+        env_id = list(backends.keys())[-1]
+    if not env_id or env_id not in backends:
+        raise HTTPException(status_code=404, detail="No active environment. Call /reset first.")
     return await step(env_id, req)
 
 
+@app.post("/step/{env_id}")
+async def step_alias_with_id(env_id: str, req: StepPayload):
+    return await step(env_id, req)
+
+
+@app.get("/state")
+async def state_alias(env_id: Optional[str] = None):
+    """Top-level /state — uses the most recently created env if env_id is omitted."""
+    if env_id is None and backends:
+        env_id = list(backends.keys())[-1]
+    if not env_id or env_id not in backends:
+        raise HTTPException(status_code=404, detail="No active environment. Call /reset first.")
+    return await get_state(env_id)
+
+
 @app.get("/state/{env_id}")
-async def state_alias(env_id: str):
+async def state_alias_with_id(env_id: str):
     return await get_state(env_id)
 
 
