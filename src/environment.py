@@ -78,6 +78,7 @@ class TrainingEnv:
             penalty += 0.5
             done = True
             self.finished = True
+            self.score = min(curr_score, 0.99)
 
         if done and not self.finished:
             self.finished = True

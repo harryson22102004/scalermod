@@ -257,8 +257,8 @@ class ScenarioGrader:
                 meta["completed"].append(obj.description)
             else:
                 meta["pending"].append(obj.description)
-            meta["score"] = min(total, 1.0)
-            return min(total, 1.0), meta
+        meta["score"] = min(total, 1.0)
+        return min(total, 1.0), meta
 
     # ---------- check implementations ----------
 
@@ -341,7 +341,7 @@ def _scenario_log_analysis() -> Scenario:
             Objective("Find the 500 error timestamp in /var/log/app.log",
                       "command_was_run", {
                           "pattern": r"grep.*500.*app\.log|cat.*app\.log"},
-                      points=0.99),
+                      points=0.95),
         ],
         max_steps=50,
         hints=["Check /var/log/app.log", "Use grep to search for '500'"],
@@ -365,7 +365,7 @@ def _scenario_permission_repair() -> Scenario:
             Objective("Make cleanup.sh executable",
                       "file_executable",
                       {"path": "/home/user/scripts/cleanup.sh"},
-                      points=0.99),
+                      points=0.95),
         ],
         max_steps=50,
         hints=["Use ls -la to check permissions",
