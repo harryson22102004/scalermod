@@ -50,16 +50,11 @@ if FRONTEND_DIR.exists():
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
     response = await call_next(request)
-    host = request.headers.get("host", "").lower()
-    is_hf_request = host.endswith(".hf.space") or host.endswith(".huggingface.co")
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
-    if settings.is_hf_space or is_hf_request:
-        response.headers.setdefault(
-            "Content-Security-Policy",
-            "frame-ancestors https://huggingface.co https://*.huggingface.co",
-        )
-    else:
-        response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault(
+        "Content-Security-Policy",
+        "frame-ancestors 'self' https://huggingface.co https://*.huggingface.co",
+    )
     response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
     response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
     response.headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")

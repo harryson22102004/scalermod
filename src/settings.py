@@ -75,14 +75,9 @@ def load_settings() -> Settings:
 
     trusted_hosts = _as_list(os.getenv("TRUSTED_HOSTS"))
     if not trusted_hosts:
-        if environment != "production":
-            trusted_hosts = ["*"]
-        else:
-            trusted_hosts = ["localhost", "127.0.0.1"]
-            if is_hf_space:
-                trusted_hosts.extend(["*.hf.space", "huggingface.co", "*.huggingface.co"])
-                if space_host:
-                    trusted_hosts.append(space_host)
+        # Proxy/CDN layers may rewrite Host unexpectedly; keep permissive default
+        # unless TRUSTED_HOSTS is explicitly provided.
+        trusted_hosts = ["*"]
 
     max_active_envs = _as_int(os.getenv("MAX_ACTIVE_ENVS"), 128)
 
