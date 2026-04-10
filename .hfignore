@@ -13,3 +13,4 @@ build/
 .next/
 .vscode/
 .env
+__pycache__/
