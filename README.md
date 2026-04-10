@@ -176,8 +176,6 @@ A FastAPI REST server that any AI agent can connect to over HTTP.
 | `GET`       | `/api/v1/env/{id}/state`  | Debug: full environment state       |
 | `GET`       | `/api/v1/env`             | List all active environments        |
 | `DELETE`    | `/api/v1/env/{id}`        | Destroy an environment              |
-| `WebSocket` | `/ws/env/{id}`            | Live terminal streaming             |
-| `POST`      | `/api/v1/arena/run`       | Compare two agents on same scenario |
 
 **How the API works:**
 
@@ -290,11 +288,21 @@ POST /api/v1/arena/run
 cd meta
 pip install -r requirements.txt
 
+# Optional: install test dependencies
+pip install -r requirements-dev.txt
+
 # Run the demo
 python demo.py
 
 # Start the API server
 python -m uvicorn src.server:app --host 0.0.0.0 --port 8000
+
+# Optional: set runtime config (defaults are in .env.example)
+set APP_ENV=development
+set ALLOW_ORIGINS=http://localhost:8000,http://127.0.0.1:8000
+
+# Run tests
+pytest -q
 
 # Test it
 curl http://localhost:8000/health
@@ -315,10 +323,14 @@ meta/
 │   ├── tasks.py                # Task interface + legacy compatibility
 │   ├── environment.py          # OpenEnv reset/step loop
 │   ├── agent.py                # AIWorker + optional LLMAgent
-│   ├── server.py               # FastAPI server (14 REST endpoints + WebSocket + Arena)
+│   ├── server.py               # FastAPI server (REST endpoints + frontend routes)
+│   ├── settings.py             # Environment-driven runtime/security settings
 │   └── __init__.py
 ├── tests/
 │   └── test_environment.py
+├── .env.example
+├── requirements-dev.txt
+├── .github/workflows/ci.yml
 ├── demo.py
 ├── requirements.txt
 ├── Dockerfile

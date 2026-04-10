@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ChaosLab Terminal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            chaos: {
+              dark: '#0a0c10',
+              darker: '#11141b',
+              panel: '#14171d',
+              border: '#2d333b',
+              text: '#e2e8f0',
+              muted: '#8b949e',
+              green: '#39ff14',
+              cyan: '#00ffff',
+              red: '#ff3333'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'Inter Fallback', 'ui-sans-serif', 'system-ui'],
+            mono: ['JetBrains Mono', 'JetBrains Mono Fallback', 'ui-monospace', 'SFMono-Regular'],
+            serif: ['ui-serif', 'Georgia', 'Cambria', 'Times New Roman', 'Times', 'serif']
+          }
+        }
+      }
+    };
+  </script>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body class="flex flex-col h-screen overflow-hidden text-chaos-text selection:bg-chaos-green selection:text-chaos-dark">
+  <div id="nav-root"></div>
+  <main id="app" class="flex-1 overflow-auto" aria-live="polite"></main>
+
+  <template id="toast-template">
+    <div class="fixed right-4 bottom-4 z-[60] bg-chaos-panel border border-chaos-green/40 rounded px-3 py-2 text-xs font-mono shadow-[0_0_20px_rgba(57,255,20,0.12)]" role="status" aria-live="polite"></div>
+  </template>
+
+  <script type="module" src="/static/app.js"></script>
+</body>
+</html>

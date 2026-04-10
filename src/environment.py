@@ -69,12 +69,13 @@ class TrainingEnv:
         done = self.step_count >= self.limit
 
         curr_score, task_info = self.task.eval(self.storage, self.terminal)
+        objectives_complete = len(task_info.get("pending", [])) == 0
 
         if curr_score > self.score:
             bonus = (curr_score - self.score) * 0.5
             penalty += bonus
             self.score = curr_score
-        if curr_score >= 1.0 and not done:
+        if objectives_complete and not done:
             penalty += 0.5
             done = True
             self.finished = True

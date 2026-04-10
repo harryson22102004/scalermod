@@ -1,13 +1,19 @@
-import json
+from pathlib import Path
+from uuid import uuid4
 from typing import Optional, Dict, Any, List
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 import uvicorn
 
 from .environment import TrainingEnv
 from .scenarios import list_scenarios, detail_scenario, SCENARIO_CATALOG
+from .settings import settings
 
 app = FastAPI(
     title="Linux SRE Environment API",
@@ -19,16 +25,39 @@ app = FastAPI(
     version="2.0.0",
 )
 
+app.add_middleware(GZipMiddleware, minimum_size=1024)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=settings.cors_allow_origins,
+    allow_credentials=settings.cors_allow_credentials,
+    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Accept", "Origin"],
 )
 
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.trusted_hosts)
+
 backends: Dict[str, TrainingEnv] = {}
-counter = 0
+
+ROOT_DIR = Path(__file__).resolve().parent.parent
+FRONTEND_DIR = ROOT_DIR / "web"
+FRONTEND_INDEX = FRONTEND_DIR / "index.html"
+
+if FRONTEND_DIR.exists():
+    app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
+
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+    response.headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
+    if settings.is_production:
+        response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+    return response
 
 
 # ======================================================================
@@ -63,14 +92,44 @@ class StepOut(BaseModel):
 #  HEALTH + TASKS
 # ======================================================================
 
-@app.get("/")
+def serve_frontend() -> FileResponse:
+    if not FRONTEND_INDEX.exists():
+        raise HTTPException(status_code=503, detail="Frontend assets are missing")
+    return FileResponse(FRONTEND_INDEX)
+
+
+@app.get("/", include_in_schema=False)
+async def hub_frontend():
+    return serve_frontend()
+
+
+@app.get("/builder", include_in_schema=False)
+@app.get("/playground", include_in_schema=False)
+@app.get("/arena", include_in_schema=False)
+async def frontend_routes():
+    return serve_frontend()
+
+
+@app.get("/api")
 async def root():
-    return {"status": "ok", "service": "linux-sre-env", "version": "2.0.0", "docs": "/docs"}
+    return {
+        "status": "ok",
+        "service": "linux-sre-env",
+        "version": "2.0.0",
+        "docs": "/docs",
+        "environment": settings.environment,
+    }
 
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy", "service": "linux-sre-env", "version": "2.0.0"}
+    return {
+        "status": "healthy",
+        "service": "linux-sre-env",
+        "version": "2.0.0",
+        "environment": settings.environment,
+        "active_environments": len(backends),
+    }
 
 
 @app.get("/metadata")
@@ -164,13 +223,21 @@ async def get_scenario(key: str):
 
 @app.post("/api/v1/env/reset")
 async def reset(req: Optional[ResetPayload] = None):
-    global counter
     if req is None:
         req = ResetPayload()
+    if len(backends) >= settings.max_active_envs:
+        raise HTTPException(
+            status_code=429,
+            detail=(
+                f"Active environment limit reached ({settings.max_active_envs}). "
+                "Delete existing environments before creating more."
+            ),
+        )
     try:
         env = TrainingEnv(scenario=req.scenario)
-        eid = f"env_{counter}"
-        counter += 1
+        eid = f"env_{uuid4().hex[:8]}"
+        while eid in backends:
+            eid = f"env_{uuid4().hex[:8]}"
         backends[eid] = env
         res = env.reset()
         return ResetOut(env_id=eid, observation=res["observation"], info=res["info"])
