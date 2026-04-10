@@ -341,7 +341,7 @@ def _scenario_log_analysis() -> Scenario:
             Objective("Find the 500 error timestamp in /var/log/app.log",
                       "command_was_run", {
                           "pattern": r"grep.*500.*app\.log|cat.*app\.log"},
-                      points=1.0),
+                      points=1),
         ],
         max_steps=50,
         hints=["Check /var/log/app.log", "Use grep to search for '500'"],
@@ -365,7 +365,7 @@ def _scenario_permission_repair() -> Scenario:
             Objective("Make cleanup.sh executable",
                       "file_executable",
                       {"path": "/home/user/scripts/cleanup.sh"},
-                      points=1.0),
+                      points=1),
         ],
         max_steps=50,
         hints=["Use ls -la to check permissions",
