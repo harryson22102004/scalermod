@@ -202,7 +202,12 @@ async def run_task(task_key: str) -> None:
             if done:
                 break
 
+        # Clamp score strictly between 0 and 1 (validator rejects 0.0 and 1.0)
         score = min(max(score, 0.0), 1.0)
+        if score <= 0.0:
+            score = 0.01
+        if score >= 1.0:
+            score = 0.99
         success = score >= SUCCESS_SCORE_THRESHOLD
 
     except Exception as exc:
@@ -220,18 +225,27 @@ async def run_task(task_key: str) -> None:
                 score=score, rewards=rewards)
 
 
+# Default set of tasks to run (must be >= 3 to satisfy the grader requirement)
+DEFAULT_TASKS = ["log_analysis", "permission_repair", "process_recovery"]
+
+
 async def main() -> None:
     parser = argparse.ArgumentParser(
         description="Custom OpenEnv inference runner.")
-    parser.add_argument("--task", default="log_analysis",
-                        help="Scenario key to run")
+    parser.add_argument("--task", default=None,
+                        help="Scenario key to run (omit to run default 3 tasks)")
     parser.add_argument("--all", action="store_true",
                         help="Run every available task")
     args = parser.parse_args()
 
     validate_required_env()
 
-    task_keys = TrainingEnv.avail_tasks() if args.all else [args.task]
+    if args.all:
+        task_keys = TrainingEnv.avail_tasks()
+    elif args.task:
+        task_keys = [args.task]
+    else:
+        task_keys = DEFAULT_TASKS
     global_start = time.monotonic()
     for key in task_keys:
         if time.monotonic() - global_start > GLOBAL_TIMEOUT:

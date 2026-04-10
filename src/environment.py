@@ -80,6 +80,12 @@ class TrainingEnv:
             self.finished = True
             self.score = min(curr_score, 0.99)
 
+        # Clamp score strictly within (0, 1) — validator rejects 0.0 and 1.0
+        if self.score <= 0.0:
+            self.score = 0.01
+        if self.score >= 1.0:
+            self.score = 0.99
+
         if done and not self.finished:
             self.finished = True
 

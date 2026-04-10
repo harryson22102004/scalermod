@@ -258,7 +258,13 @@ class ScenarioGrader:
             else:
                 meta["pending"].append(obj.description)
         meta["score"] = min(total, 1.0)
-        return min(total, 1.0), meta
+        # Clamp strictly within (0, 1) — validator rejects 0.0 and 1.0
+        clamped = min(total, 1.0)
+        if clamped <= 0.0:
+            clamped = 0.01
+        if clamped >= 1.0:
+            clamped = 0.99
+        return clamped, meta
 
     # ---------- check implementations ----------
 
