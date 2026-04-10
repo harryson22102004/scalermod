@@ -33,6 +33,7 @@ def _as_list(raw: str) -> List[str]:
 @dataclass(frozen=True)
 class Settings:
     environment: str
+    is_hf_space: bool
     cors_allow_origins: List[str]
     cors_allow_credentials: bool
     trusted_hosts: List[str]
@@ -53,6 +54,9 @@ _DEFAULT_DEV_ORIGINS = [
 
 def load_settings() -> Settings:
     environment = os.getenv("APP_ENV", "development").strip().lower() or "development"
+    space_id = os.getenv("SPACE_ID", "").strip()
+    space_host = os.getenv("SPACE_HOST", "").strip().lower()
+    is_hf_space = bool(space_id)
 
     configured_origins = _as_list(os.getenv("ALLOW_ORIGINS"))
     if configured_origins:
@@ -71,12 +75,20 @@ def load_settings() -> Settings:
 
     trusted_hosts = _as_list(os.getenv("TRUSTED_HOSTS"))
     if not trusted_hosts:
-        trusted_hosts = ["*"] if environment != "production" else ["localhost", "127.0.0.1"]
+        if environment != "production":
+            trusted_hosts = ["*"]
+        else:
+            trusted_hosts = ["localhost", "127.0.0.1"]
+            if is_hf_space:
+                trusted_hosts.extend(["*.hf.space", "huggingface.co", "*.huggingface.co"])
+                if space_host:
+                    trusted_hosts.append(space_host)
 
     max_active_envs = _as_int(os.getenv("MAX_ACTIVE_ENVS"), 128)
 
     return Settings(
         environment=environment,
+        is_hf_space=is_hf_space,
         cors_allow_origins=cors_allow_origins,
         cors_allow_credentials=cors_allow_credentials,
         trusted_hosts=trusted_hosts,
