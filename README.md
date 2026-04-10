@@ -329,6 +329,32 @@ meta/
 
 ---
 
+## Important: Task Scoring Requirements
+
+**Validation rules for submissions:**
+
+- Your submission must include at least 3 tasks with graders (objectives).
+- Each task's score must be strictly between 0 and 1 (not 0.0 and not 1.0).
+- If you define a single-objective scenario, set `points=0.99` (or similar).
+- For multi-objective scenarios, ensure no single objective uses `points=1.0` or `points=0.0`.
+- The scenario grader and all scoring logic use floating-point values for compatibility.
+
+**Grading Table Example:**
+
+| Scenario Name     | Objective Description                | Points | Valid? |
+| ----------------- | ------------------------------------ | ------ | ------ |
+| Log Analysis      | Find 500 error in app log            | 0.99   | ✅     |
+| Permission Repair | Make cleanup.sh executable           | 0.99   | ✅     |
+| Process Recovery  | Identify postgres is dead            | 0.2    | ✅     |
+| Process Recovery  | Restart postgres service             | 0.5    | ✅     |
+| Process Recovery  | Verify postgres is listening on 5432 | 0.3    | ✅     |
+| (Invalid Example) | Only objective, points=1.0           | 1.0    | ❌     |
+| (Invalid Example) | Only objective, points=0.0           | 0.0    | ❌     |
+
+These requirements are enforced by the validator. See `src/scenarios.py` for more examples of correct scoring.
+
+---
+
 ## What Makes This Different
 
 1. **Cascading failures** — Faults trigger other faults, just like in real production outages. No other AI training environment does this.

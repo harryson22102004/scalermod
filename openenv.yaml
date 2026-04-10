@@ -202,7 +202,7 @@ grading:
       score_multiplier: 0.5
     - stage: 3
       description: "Solution verified"
-      score_multiplier: 1.0
+      score_multiplier: 0.99
 
 # Server Configuration
 server:
